@@ -1,0 +1,46 @@
+syntax = "proto3";
+package kvstoreProto;
+
+option go_package = "protocompiled/kvstore";
+
+
+// Interface exported by the server.
+service Store {
+
+  // Client asks (value, timestamp) for given key
+  rpc Get(Key) returns (ValueTs) {}
+
+  // Client asks to Set '(value, timestamp)' at the 'key' - inside RecordMsg
+  // and Send an Ack back to client
+  rpc Set(Record) returns (AckMsg) {}
+
+}
+
+// 'bytes': Any arbitrary sequence of bytes no longer than 2^32
+// source: https://protobuf.dev/programming-guides/proto3/#scalar
+
+message Key {
+    // key is 24 bytes
+    bytes key = 1;
+}
+
+
+message ValueTs {
+    // value is 10 bytes
+    bytes value = 1;
+    // timestamp
+    int32 ts = 2;
+    // TODO: what if ts overflows?
+}
+
+
+message Record {
+    Key key = 1;
+    ValueTs valuets = 2;
+}
+
+message AckMsg {
+    // ack by server to a Set sent by client
+    bool ack = 1;
+}
+
