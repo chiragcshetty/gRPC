@@ -7,36 +7,29 @@ option go_package = "protocompiled/kvstore";
 // Interface exported by the server.
 service Store {
 
-  // Client asks (value, timestamp) for given key
-  rpc Get(Key) returns (ValueTs) {}
+  // Client asks (key, "", "") for given key. Server returns (value, ts)
+  rpc Get(Record) returns (ValueTs) {}
 
-  // Client asks to Set '(value, timestamp)' at the 'key' - inside RecordMsg
-  // and Send an Ack back to client
+  // Client asks to Set (key, value, timestamp). Servers replies with an Ack
   rpc Set(Record) returns (AckMsg) {}
 
 }
 
-// 'bytes': Any arbitrary sequence of bytes no longer than 2^32
-// source: https://protobuf.dev/programming-guides/proto3/#scalar
-
-message Key {
-    // key is 24 bytes
-    bytes key = 1;
-}
-
-
-message ValueTs {
-    // value is 10 bytes
-    bytes value = 1;
-    // timestamp
-    int32 ts = 2;
-    // TODO: what if ts overflows?
-}
-
-
+// Record = (key, value, ts)
 message Record {
-    Key key = 1;
+    // key is 24 bytes, but we are not enforcing it. 
+	// Using a string instead (note: '[]byte' can't be used as map key in golang)
+    // bytes key = 1;
+    string key = 1;
     ValueTs valuets = 2;
+}
+
+// (value, ts) is defined as a separate protobuf object, so that it can also be used to store 
+// at the server as a map of key->ValueTs proto object (rather than extracting it from Record and
+// putting it back to the map)
+message ValueTs{
+    string value = 1;
+    int32 ts = 2; // timestamp
 }
 
 message AckMsg {
@@ -44,3 +37,8 @@ message AckMsg {
     bool ack = 1;
 }
 
+
+
+//############### INFO #####################
+// 'bytes': Any arbitrary sequence of bytes no longer than 2^32
+// source: https://protobuf.dev/programming-guides/proto3/#scalar

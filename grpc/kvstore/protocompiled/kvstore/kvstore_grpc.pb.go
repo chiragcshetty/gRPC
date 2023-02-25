@@ -22,10 +22,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StoreClient interface {
-	// Client asks (value, timestamp) for given key
-	Get(ctx context.Context, in *Key, opts ...grpc.CallOption) (*ValueTs, error)
-	// Client asks to Set '(value, timestamp)' at the 'key' - inside RecordMsg
-	// and Send an Ack back to client
+	// Client asks (key, "", "") for given key. Server returns (value, ts)
+	Get(ctx context.Context, in *Record, opts ...grpc.CallOption) (*ValueTs, error)
+	// Client asks to Set (key, value, timestamp). Servers replies with an Ack
 	Set(ctx context.Context, in *Record, opts ...grpc.CallOption) (*AckMsg, error)
 }
 
@@ -37,7 +36,7 @@ func NewStoreClient(cc grpc.ClientConnInterface) StoreClient {
 	return &storeClient{cc}
 }
 
-func (c *storeClient) Get(ctx context.Context, in *Key, opts ...grpc.CallOption) (*ValueTs, error) {
+func (c *storeClient) Get(ctx context.Context, in *Record, opts ...grpc.CallOption) (*ValueTs, error) {
 	out := new(ValueTs)
 	err := c.cc.Invoke(ctx, "/kvstoreProto.Store/Get", in, out, opts...)
 	if err != nil {
@@ -59,10 +58,9 @@ func (c *storeClient) Set(ctx context.Context, in *Record, opts ...grpc.CallOpti
 // All implementations must embed UnimplementedStoreServer
 // for forward compatibility
 type StoreServer interface {
-	// Client asks (value, timestamp) for given key
-	Get(context.Context, *Key) (*ValueTs, error)
-	// Client asks to Set '(value, timestamp)' at the 'key' - inside RecordMsg
-	// and Send an Ack back to client
+	// Client asks (key, "", "") for given key. Server returns (value, ts)
+	Get(context.Context, *Record) (*ValueTs, error)
+	// Client asks to Set (key, value, timestamp). Servers replies with an Ack
 	Set(context.Context, *Record) (*AckMsg, error)
 	mustEmbedUnimplementedStoreServer()
 }
@@ -71,7 +69,7 @@ type StoreServer interface {
 type UnimplementedStoreServer struct {
 }
 
-func (UnimplementedStoreServer) Get(context.Context, *Key) (*ValueTs, error) {
+func (UnimplementedStoreServer) Get(context.Context, *Record) (*ValueTs, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
 func (UnimplementedStoreServer) Set(context.Context, *Record) (*AckMsg, error) {
@@ -91,7 +89,7 @@ func RegisterStoreServer(s grpc.ServiceRegistrar, srv StoreServer) {
 }
 
 func _Store_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Key)
+	in := new(Record)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -103,7 +101,7 @@ func _Store_Get_Handler(srv interface{}, ctx context.Context, dec func(interface
 		FullMethod: "/kvstoreProto.Store/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StoreServer).Get(ctx, req.(*Key))
+		return srv.(StoreServer).Get(ctx, req.(*Record))
 	}
 	return interceptor(ctx, in, info, handler)
 }

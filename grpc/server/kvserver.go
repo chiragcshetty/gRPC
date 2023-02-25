@@ -21,50 +21,54 @@ var (
 
 type storeServer struct {
 	kvs.UnimplementedStoreServer
-	// key is 24 bytes
-	store map[[24]byte]kvs.ValueTs 
-	// TODO:  Is it a good idea to use proto object as key? 
-
+	// key is 24 bytes, but we are not enforcing it. 
+	// Using a string instead (note: '[]byte' can't be used os map key in golang)
+	store map[string]kvs.ValueTs 
+	// TODO:Enforce key length (eg: map[[24]byte]kvs.ValueTs)
+	//      But protobuff doesn't support fixed length byte array
+	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])]
 	mu         sync.Mutex 
 }
 
-// GetFeature returns the feature at the given point.
-func (s *storeServer) Get(ctx context.Context, key *kvs.Key) (*kvs.ValueTs, error) {
-		val_ts, ok := s.store[([24]byte)(key.Key[0:23])]
+// Implementation of Get service
+func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
+	    fmt.Println("Got a request for: ", record.String())
+		valuets, ok := s.store[record.GetKey()]
 		if ok{
-			return &val_ts, nil
+			return &valuets, nil
 		}
-
-	// No feature was found, return an unnamed feature
+	// Key was not found, return an unnamed ValueTS
 	return &kvs.ValueTs{}, nil
 }
 
+// ************** Simran: template *************************
+// Load 1M KVs: Fixed key size of 24 bytes and value size of 10bytes
+// loadKV()
+// ********************************************************
 
-
-
-// loadFeatures loads features from a JSON file.
+// loadFeatures some KV's
 func (s *storeServer) loadKV() {
-
-	kv1 := kvs.Record{
-		Key: &kvs.Key{ Key: []byte{1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10,1,2,3,4}},
-		Valuets:    &kvs.ValueTs{
-			Value: []byte{1,2,3,4,5,6,7,8,9,10},
-			Ts: 102,
-		},
-	}
-	fmt.Println("TS:", kv1.Valuets.Ts)
-	s.store[([24]byte)(kv1.Key.Key)] = *kv1.Valuets
-	fmt.Println("TS:", kv1.Valuets.Ts)
+	for i := 1000; i < 10000; i++ {
+		kv1 := kvs.Record{
+			Key: fmt.Sprintf("%s%d", "KEY", i) ,
+			Valuets:    &kvs.ValueTs{
+				Value: fmt.Sprintf("%s%d", "VALUE", i),
+				Ts: 102,
+			},
+		}
+		s.store[kv1.GetKey()] = *kv1.Valuets
+		printKV(&kv1)
+	}	
 }
 
 
+func printKV(kv *kvs.Record) {
+	fmt.Printf("%s %s %d \n", kv.GetKey(), kv.Valuets.GetValue(), kv.Valuets.GetTs())
+}
 
-//func serialize(point *pb.Point) string {
-//	return fmt.Sprintf("%d %d", point.Latitude, point.Longitude)
-//}
 
 func newServer() *storeServer {
-	s := &storeServer{store: make(map[[24]byte]kvs.ValueTs )}
+	s := &storeServer{ store: make(map[string]kvs.ValueTs) }
 	s.loadKV()
 	return s
 }
@@ -81,14 +85,10 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-// exampleData is a copy of testdata/route_guide_db.json. It's to avoid
-// specifying file path with `go run`.
-var exampleData = []byte(`[{
-    "key": {
-        "key": [10,20,34,45]
-    },
-    "valuets":{
-		"value":"VALUE1",
-		"ts": 100
-	}
-}]`)
+
+
+
+
+//func serialize(kv *kvs.Record) string {
+//	return fmt.Sprintf("%s %s %d", kv.KeyMsg.Key, kv.Valuets.Value, kv.ValueTs.Ts)
+//}
