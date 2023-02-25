@@ -19,6 +19,7 @@ var (
 	port       = flag.Int("port", 8009, "The server port")
 )
 
+//*******************************************************************************************************************************
 type storeServer struct {
 	kvs.UnimplementedStoreServer
 	// key is 24 bytes, but we are not enforcing it. 
@@ -26,14 +27,19 @@ type storeServer struct {
 	store map[string]kvs.ValueTs 
 	// TODO:Enforce key length (eg: map[[24]byte]kvs.ValueTs)
 	//      But protobuff doesn't support fixed length byte array
-	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])]
-	mu         sync.Mutex 
+	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])
+
+	lock         sync.Mutex 
 }
+//*******************************************************************************************************************************
+
 
 // Implementation of Get service
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
 	    fmt.Println("Got a request for: ", record.String())
+		s.lock.Lock()
 		valuets, ok := s.store[record.GetKey()]
+		s.lock.Unlock()
 		if ok{
 			return &valuets, nil
 		}
@@ -41,6 +47,36 @@ func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs
 	return &kvs.ValueTs{}, nil
 }
 
+
+// Implementation of Set service
+func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg, error) {
+	fmt.Println("\nGot a set for: ", record.String())
+
+	affected_key  := record.GetKey()
+	proposed_valuets := record.Valuets
+
+	s.lock.Lock()
+	current_valuets, ok := s.store[affected_key]
+
+	if ok{
+		fmt.Printf("		Timestamps: Current: %d, Proposed: %d \n", current_valuets.GetTs(), proposed_valuets.GetTs())
+		if proposed_valuets.GetTs() > current_valuets.GetTs(){
+			s.store[affected_key] = *proposed_valuets
+			fmt.Printf("		Value replaced!\n\n")
+		} else {
+			fmt.Printf("		Value not changed. No action needed\n\n")
+		}	
+	} else {
+		s.store[affected_key] = *proposed_valuets
+		fmt.Printf("Key doesnt exist. Added\n\n")
+	}
+	s.lock.Unlock()
+
+	// Server Acks in any case.
+	return  &kvs.AckMsg{}, nil
+}
+
+//*******************************************************************************************************************************
 // ************** Simran: template *************************
 // Load 1M KVs: Fixed key size of 24 bytes and value size of 10bytes
 // loadKV()
@@ -59,6 +95,8 @@ func (s *storeServer) loadKV() {
 		s.store[kv1.GetKey()] = *kv1.Valuets
 		printKV(&kv1)
 	}	
+
+	fmt.Printf("Setup Complete\n**********************************************************************\n")
 }
 
 
@@ -72,6 +110,9 @@ func newServer() *storeServer {
 	s.loadKV()
 	return s
 }
+
+//*******************************************************************************************************************************
+
 
 func main() {
 	flag.Parse()
