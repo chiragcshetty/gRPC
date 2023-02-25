@@ -21,12 +21,9 @@ var (
 
 type storeServer struct {
 	kvs.UnimplementedStoreServer
-	// key is 24 bytes, but we are not enforcing it 
+	// key is 24 bytes
 	store map[[24]byte]kvs.ValueTs 
 	// TODO:  Is it a good idea to use proto object as key? 
-	// TODO: Enforce key length (eg: map[[24]byte]kvs.ValueTs)
-	//       But protobuff doesn't support fixed length byte array
-	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])]
 
 	mu         sync.Mutex 
 }
