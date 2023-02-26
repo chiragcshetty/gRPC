@@ -86,10 +86,13 @@ func main() {
 
 	start := time.Now()
 	for i=200; i<20000; i++{
-		setKV(client, "KEY9991", fmt.Sprintf("%s-%d-%d", "Val", *clientid ,i), i)
-		setKV(client, "KEY99910", fmt.Sprintf("%s-%d-%d", "Val2", *clientid, i), i)
-		getKV(client, "KEY9991")
-		getKV(client, "KEY99910")
+		setKV(client, fmt.Sprintf("KEY9%d",*clientid), fmt.Sprintf("%s-%d-%d", "Val", *clientid ,i), i)
+		getKV(client, fmt.Sprintf("KEY9%d",*clientid))
+		getKV(client, fmt.Sprintf("KEY8%d",*clientid))
+		getKV(client, fmt.Sprintf("KEY7%d",*clientid))
+		getKV(client, fmt.Sprintf("KEY6%d",*clientid))
+		getKV(client, fmt.Sprintf("KEY5%d",*clientid))
+		getKV(client, fmt.Sprintf("KEY4%d",*clientid))
 	}
 	duration := time.Since(start)
 	fmt.Println(duration)

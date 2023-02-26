@@ -24,12 +24,15 @@ type storeServer struct {
 	kvs.UnimplementedStoreServer
 	// key is 24 bytes, but we are not enforcing it. 
 	// Using a string instead (note: '[]byte' can't be used os map key in golang)
-	store map[string]kvs.ValueTs 
+
+	// Using Sync map: https://medium.com/@deckarep/the-new-kid-in-town-gos-sync-map-de24a6bf7c2c
+	store sync.Map
+
 	// TODO:Enforce key length (eg: map[[24]byte]kvs.ValueTs)
 	//      But protobuff doesn't support fixed length byte array
 	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])
 
-	lock         sync.Mutex 
+	//lock         sync.Mutex 
 }
 //*******************************************************************************************************************************
 
@@ -37,10 +40,12 @@ type storeServer struct {
 // Implementation of Get service
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
 	    //fmt.Println("Got a request for: ", record.String())
-		s.lock.Lock()
-		valuets, ok := s.store[record.GetKey()]
-		s.lock.Unlock()
+		//s.lock.Lock()
+		valuets1, ok := s.store.Load(record.GetKey())
+		
+		//s.lock.Unlock()
 		if ok{
+			valuets := valuets1.(kvs.ValueTs) //sync map has no types (i.e any type). So you have to provvide the type interface
 			return &valuets, nil
 		}
 	// Key was not found, return an unnamed ValueTS
@@ -55,22 +60,23 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	affected_key  := record.GetKey()
 	proposed_valuets := record.Valuets
 
-	s.lock.Lock()
-	current_valuets, ok := s.store[affected_key]
+	//s.lock.Lock()
+	current_valuets1, ok := s.store.Load(affected_key)
 
 	if ok{
+		current_valuets := current_valuets1.(kvs.ValueTs)
 		//fmt.Printf("		Timestamps: Current: %d, Proposed: %d \n", current_valuets.GetTs(), proposed_valuets.GetTs())
 		if proposed_valuets.GetTs() > current_valuets.GetTs(){
-			s.store[affected_key] = *proposed_valuets
+			s.store.Store(affected_key, *proposed_valuets )
 			//fmt.Printf("		Value replaced!\n\n")
 		} else {
 			//fmt.Printf("		Value not changed. No action needed\n\n")
 		}	
 	} else {
-		s.store[affected_key] = *proposed_valuets
+		s.store.Store(affected_key, *proposed_valuets )
 		//fmt.Printf("Key doesnt exist. Added\n\n")
 	}
-	s.lock.Unlock()
+	//s.lock.Unlock()
 
 	// Server Acks in any case.
 	return  &kvs.AckMsg{}, nil
@@ -92,7 +98,7 @@ func (s *storeServer) loadKV() {
 				Ts: 102,
 			},
 		}
-		s.store[kv1.GetKey()] = *kv1.Valuets
+		s.store.Store(kv1.GetKey(), *kv1.Valuets)
 		printKV(&kv1)
 	}	
 
@@ -106,7 +112,8 @@ func printKV(kv *kvs.Record) {
 
 
 func newServer() *storeServer {
-	s := &storeServer{ store: make(map[string]kvs.ValueTs) }
+	var newSyncMap sync.Map
+	s := &storeServer{ store: newSyncMap }
 	s.loadKV()
 	return s
 }
