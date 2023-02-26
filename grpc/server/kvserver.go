@@ -124,8 +124,8 @@ func main() {
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	
-	fmt.Printf("Normal map with lock implementation")
 	kvs.RegisterStoreServer(grpcServer, newServer())
+	fmt.Printf("Normal map with lock implementation")
 	grpcServer.Serve(lis)
 }
 
