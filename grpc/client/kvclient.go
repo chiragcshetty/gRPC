@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"math"
 	"io/ioutil"
+	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -189,6 +190,41 @@ func logKV(key string, valuets *kvs.ValueTs) {
 	log.Printf("	GOT: Key = %s, Value = %s, TS = %f \n", key, valuets.GetValue(), valuets.GetTs())
 }
 
+func randomWorkload( numOperation int){
+	var i int = 0; value := ""; key := ""
+
+	for i=0; i<numOperation; i++{
+		key = fmt.Sprintf("KEY-000000000000009999%d",i%100)
+		value = read(key)
+		log.Printf("Recieved for key %s: %s \n\n", key, value)
+
+		newValue :=  fmt.Sprintf("VAL-XXXXX%d",*clientid)
+		write(key, newValue)
+		log.Printf("Written for key %s: %s \n", key, newValue)
+		log.Printf("***************************************************************\n\n")
+	}
+}
+
+func fromFileWorkload(){
+	file, err := os.Open("dataset/operations.dat")
+	if err != nil {log.Fatal(err)}
+    defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+        op := scanner.Text()
+		temp := strings.Fields(op)
+		if temp[0]=="GET"{
+			value := read(temp[1])
+			log.Printf("Recieved for key %s: %s \n\n", temp[1], value)
+		} else if temp[0]=="SET" {
+			write(temp[1], temp[2])
+			log.Printf("Written for key %s: %s \n", temp[1], temp[2])
+		} else {
+			log.Fatal("Operation neither GET or SET; %s", temp[0])
+		}
+	}
+}
+
 //###################################################### MAIN ###############################################################
 func main() {
 
@@ -246,19 +282,10 @@ func main() {
 
 	//************************************* Test Workload *************************************************
 
-	var i int32 = 0; value := ""; key := ""
+	
 
 	start := time.Now()
-	for i=200; i<10000; i++{
-		key = fmt.Sprintf("KEY%d%d",700 ,i%10)
-		value = read(key)
-		log.Printf("Recieved for key %s: %s \n\n", key, value)
-
-		newValue :=  fmt.Sprintf("VAL%d%d",*clientid,i)
-		write(key, newValue)
-		log.Printf("Written for key %s: %s \n", key, newValue)
-		log.Printf("***************************************************************\n\n")
-	}
+	fromFileWorkload()
 	duration := time.Since(start)
 	fmt.Println(duration)
 

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"os"
 	"io/ioutil"
+	"bufio"
+	"strings"
 
 	"google.golang.org/grpc"
 
@@ -105,6 +107,28 @@ func (s *storeServer) loadKV() {
 	log.Printf("Setup Complete.\n\n")
 }
 
+func (s *storeServer) loadKVfromFile() {
+	file, err := os.Open("dataset/dataset.dat")
+	if err != nil {log.Fatal(err)}
+    defer file.Close()
+	scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        kv := scanner.Text()
+		temp := strings.Fields(kv)
+		key, value := temp[0], temp[1]
+		kvrecord := kvs.Record{
+			Key: key ,
+			Valuets:    &kvs.ValueTs{
+				Value: value,
+				Ts: 1.0,
+			},
+		}
+		s.store[kvrecord.GetKey()] = *kvrecord.Valuets
+		printKV(&kvrecord)
+	}
+	log.Printf("Setup Complete.\n\n")
+}
+
 
 func printKV(kv *kvs.Record) {
 	log.Printf("(key, value, ts) = ( %s, %s, %f )\n", kv.GetKey(), kv.Valuets.GetValue(), kv.Valuets.GetTs())
@@ -113,7 +137,7 @@ func printKV(kv *kvs.Record) {
 
 func newServer() *storeServer {
 	s := &storeServer{ store: make(map[string]kvs.ValueTs) }
-	s.loadKV()
+	s.loadKVfromFile()
 	return s
 }
 
