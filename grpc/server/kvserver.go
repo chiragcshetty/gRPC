@@ -116,12 +116,15 @@ func newServer() *storeServer {
 
 func main() {
 	flag.Parse()
+	
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
+	
+	fmt.Printf("Normal map with lock implementation")
 	kvs.RegisterStoreServer(grpcServer, newServer())
 	grpcServer.Serve(lis)
 }
