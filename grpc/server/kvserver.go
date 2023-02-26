@@ -19,7 +19,7 @@ import (
 
 //########################################## Globals #######################################################################################
 var (
-	logType        = flag.String("log", "stdout", "Logging Options: off, file (stored at logs/server-port.txt), stdout (default)")
+	logType        = flag.String("log", "off", "Logging Options: off (default), file (stored at logs/server-port.txt), stdout ")
 	port           = flag.String("port", "8009", "The server will listen on this port")
 )
 
@@ -43,16 +43,16 @@ type storeServer struct {
 ///************-------------------- GET Request Implementation -----------------------------**********************
 // Request: GET (key). If key is found, send back the (value,ts). Else send ("", 0.0)
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
-	    log.Printf("!^! Got a Get request for: %s \n", record.GetKey())
+	    //log.Printf("!^! Got a Get request for: %s \n", record.GetKey())
 		s.lock.Lock()
 			valuets, ok := s.store[record.GetKey()]
 		s.lock.Unlock()
 		if ok{
-			log.Printf("		Sending back: %s \n", valuets.String())
+			//log.Printf("		Sending back: %s \n", valuets.String())
 			return &valuets, nil
 		}
 	// Key was not found, return an empty valuets
-	log.Printf("		Key not found!\n")
+	//log.Printf("		Key not found!\n")
 	return &kvs.ValueTs{}, nil
 }
 
@@ -60,7 +60,7 @@ func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs
 ///************-------------------- SET Request Implementation -----------------------------************************
 // Request: SET (key, propoosed_value, proposed_ts). If key doesn't exist, add it. In any case, Ack to the sender.
 func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg, error) {
-	log.Printf("!~! Got a Set request for: %s\n", record.String())
+	//log.Printf("!~! Got a Set request for: %s\n", record.String())
 
 	affected_key  := record.GetKey()
 	proposed_valuets := record.Valuets
@@ -70,16 +70,16 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 		// Set the new vallue only if current ts < proposed ts. 
 		// Else do nothing and just ack the request
 		if ok {
-				log.Printf("		Timestamps: Current: %f, Proposed: %f \n", current_valuets.GetTs(), proposed_valuets.GetTs())
+				//log.Printf("		Timestamps: Current: %f, Proposed: %f \n", current_valuets.GetTs(), proposed_valuets.GetTs())
 				if proposed_valuets.GetTs() > current_valuets.GetTs(){
 					s.store[affected_key] = *proposed_valuets
-					log.Printf("		Value replaced!\n\n")
+					//log.Printf("		Value replaced!\n\n")
 				} else {
-					log.Printf("		Value not changed. No action needed\n\n")
+					//log.Printf("		Value not changed. No action needed\n\n")
 				}	
 		} else {  // If key is not found, add the key
 				s.store[affected_key] = *proposed_valuets
-				log.Printf("Key didn't exist. So, Added it. Thank me later!\n\n")
+				//log.Printf("Key didn't exist. So, Added it. Thank me later!\n\n")
 		}
 	s.lock.Unlock()
 

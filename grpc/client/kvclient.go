@@ -31,8 +31,8 @@ var (
 	// serverAddrInfo: file that contains replica info as "ip:port" - one per line
 	serverAddrInfo     = flag.String("addrfile", "replicainfo.txt" , 
 									"File containing server address in the format of host:port")
-	logType        = flag.String("log", "stdout", `Logging Options: off, file 
-									(stored at logs/server-port.txt), stdout (default)`)
+	logType        = flag.String("log", "off", `Logging Options: off (default), file 
+									(stored at logs/server-port.txt), stdout`)
 )
 
 //##################################### Get and Set from one replica ######################################################################
@@ -45,20 +45,17 @@ var (
 func getOneReplica(replicaNo int, client kvs.StoreClient, key string, 
 											       ch chan<- *kvs.ValueTs  ) { 
 
-	log.Printf(`ONE REPLICA %d - GET: Getting (value, ts) for 
-				the key %s from replica no %d \n`, replicaNo, key, replicaNo)
+	//log.Printf(`ONE REPLICA %d - GET: Getting (value, ts) for the key %s from replica no %d \n`, replicaNo, key, replicaNo)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	kvRequest := kvs.Record{ Key: key ,}
 	valuets, err := client.Get(ctx, &kvRequest)
 	if err != nil {
-		log.Printf(`WARNING! client.Get failed for the key %s 
-					from replica no %d: %v \n`, key, replicaNo, err)
+		log.Printf(`WARNING! client.Get failed for the key %s from replica no %d: %v \n`, key, replicaNo, err)
 		return
 	}
-	log.Printf("ONE REPLICA %d - GET: Got - Key = %s, Value = %s, TS = %f \n", 
-				replicaNo, key, valuets.GetValue(), valuets.GetTs())
+	//log.Printf("ONE REPLICA %d - GET: Got - Key = %s, Value = %s, TS = %f \n", replicaNo, key, valuets.GetValue(), valuets.GetTs())
 	ch <- valuets
 }
 
@@ -69,8 +66,7 @@ func getOneReplica(replicaNo int, client kvs.StoreClient, key string,
 func setOneReplica(replicaNo int,client kvs.StoreClient, key string, 
 					         value string, ts float32, ch chan<- *kvs.AckMsg) {
 
-	log.Printf(`ONE REPLICA %d - SET: Setting: ( key: %s, value : %s, ts : %f ) 
-							at replica no %d \n`, replicaNo , key, value, ts, replicaNo)
+	//log.Printf(`ONE REPLICA %d - SET: Setting: ( key: %s, value : %s, ts : %f ) at replica no %d \n`, replicaNo , key, value, ts, replicaNo)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -83,12 +79,10 @@ func setOneReplica(replicaNo int,client kvs.StoreClient, key string,
 	ack, err := client.Set(ctx, &kvRequest)
 
 	if err != nil {
-		log.Printf(`WARNING! client.Set failed for the key %s at 
-							 replica no %d: %v \n`, key, replicaNo, err)
+		log.Printf(`WARNING! client.Set failed for the key %s at replica no %d: %v \n`, key, replicaNo, err)
 		return
 	}
-	log.Printf(`ONE REPLICA %d - SET: Ack rcvd for key %s from replica 
-										no %d \n`, replicaNo , key, replicaNo)
+	//log.Printf(`ONE REPLICA %d - SET: Ack rcvd for key %s from replica no %d \n`, replicaNo , key, replicaNo)
 	ch <- ack
 }
 
@@ -110,8 +104,7 @@ func getKV(key string) (float32, string) {
 	for i:=0; i <numReplicas; i++ { // launch a handler per replica
 		go getOneReplica(i, replicaClients[i], key, getChannel) }
 
-	log.Printf(`Launched GET handlers for all replicas 
-				for Key %s \n`,key )
+	//log.Printf(`Launched GET handlers for all replicas for Key %s \n`,key )
 
 	// loop until quorum number of replies
 	for ( numReplies < quorum ) {
@@ -127,15 +120,13 @@ func getKV(key string) (float32, string) {
 					value = replyValuets.GetValue()  
 				}
 				numReplies = numReplies + 1
-				log.Printf("GET Key %s : Number of Replies: %d \n",
-							 key, numReplies)
+				//log.Printf("GET Key %s : Number of Replies: %d \n", key, numReplies)
 
 			default:
 				time.Sleep(20 * time.Nanosecond)
 		}
 	}
-	log.Printf("Key %s : getKV() done : maxTS = %f, value = %s \n",
-						 key, maxTs, value)
+	//log.Printf("Key %s : getKV() done : maxTS = %f, value = %s \n", key, maxTs, value)
 	return maxTs, value
 }
 
@@ -151,20 +142,18 @@ func setKV(key string, value string, ts float32) int {
 		go setOneReplica(i, replicaClients[i], key, value, ts, ackChannel)
 	}
 
-	log.Printf(`Launched SET handlers for all replicas 
-				for Key %s, Value %s, TS %f \n`,key, value, ts )
+	//log.Printf(`Launched SET handlers for all replicas for Key %s, Value %s, TS %f \n`,key, value, ts )
 
 	for ( numAcks < quorum ) {
 		select{
 			case _ = <-ackChannel:
 				numAcks = numAcks + 1
-				log.Printf("SET Key %s : Number of Acks: %d \n",
-							 key, numAcks)
+				//log.Printf("SET Key %s : Number of Acks: %d \n",key, numAcks)
 			default:
 				time.Sleep(20 * time.Nanosecond)
 		}
 	}
-	log.Printf("Key %s : setKV() done \n", key)
+	//log.Printf("Key %s : setKV() done \n", key)
 	return numAcks
 }
 
@@ -178,8 +167,7 @@ func read(key string) string {
 	tsNew := float32(math.Floor(float64(maxTs+1))) + clientSignature
 	// SET Phase ('Ensures future reads will see what I read')
 	setKV(key, value, tsNew)
-	log.Printf(`READ for Key %s completed. Value = %s, 
-							ts = %f \n`, key, value, tsNew)
+	//log.Printf(`READ for Key %s completed. Value = %s, ts = %f \n`, key, value, tsNew)
 	return value
 }
 
@@ -192,15 +180,13 @@ func write(key string, newValue string) {
 	tsNew := float32(math.Floor(float64(maxTs+1))) + clientSignature
 	// SET Phase
 	setKV(key, newValue, tsNew)
-	log.Printf(`WRITE to Key %s completed. Value = %s, 
-							ts = %f \n`, key, newValue, tsNew)
+	//log.Printf(`WRITE to Key %s completed. Value = %s, ts = %f \n`, key, newValue, tsNew)
 	return 
 }
 
 //#################################################### Utilities ############################################################
 func logKV(key string, valuets *kvs.ValueTs) {
-	log.Printf("	GOT: Key = %s, Value = %s, TS = %f \n", 
-					key, valuets.GetValue(), valuets.GetTs())
+	log.Printf("	GOT: Key = %s, Value = %s, TS = %f \n", key, valuets.GetValue(), valuets.GetTs())
 }
 
 //###################################################### MAIN ###############################################################
