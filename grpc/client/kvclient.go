@@ -89,7 +89,7 @@ func getKV(key string) (float32, string) {
 				numReplies = numReplies + 1
 				fmt.Printf("Num replies : %d\n", numReplies)
 			default:
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Nanosecond)
 		}
 	}
 	fmt.Printf("getKV Done \n")
@@ -108,7 +108,7 @@ func setKV(key string, value string, ts float32) int {
 			case _ = <-ackChannel:
 				numAcks = numAcks + 1
 			default:
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Nanosecond)
 		}
 	}
 	fmt.Printf("setKV Done \n")
