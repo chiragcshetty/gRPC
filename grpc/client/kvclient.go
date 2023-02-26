@@ -34,6 +34,7 @@ var (
 									"File containing server address in the format of host:port")
 	logType        = flag.String("log", "off", `Logging Options: off (default), file 
 									(stored at logs/server-port.txt), stdout`)
+	workload   = flag.String("workload", "dataset/operations-0.dat", "File providing workload opertions. Defualt: dataset/operations-0.dat")
 )
 
 //##################################### Get and Set from one replica ######################################################################
@@ -190,6 +191,7 @@ func logKV(key string, valuets *kvs.ValueTs) {
 	log.Printf("	GOT: Key = %s, Value = %s, TS = %f \n", key, valuets.GetValue(), valuets.GetTs())
 }
 
+// Generate a workload that operates on a set of 100 keys
 func randomWorkload( numOperation int){
 	var i int = 0; value := ""; key := ""
 
@@ -205,8 +207,10 @@ func randomWorkload( numOperation int){
 	}
 }
 
-func fromFileWorkload(){
-	file, err := os.Open("dataset/operations.dat")
+// Read operations from a file
+// Format: GET KEY-XXXXXXX.., SET KEY-XXXXXX... VAL-XX....
+func fromFileWorkload(fname string){
+	file, err := os.Open(fname)
 	if err != nil {log.Fatal(err)}
     defer file.Close()
 	scanner := bufio.NewScanner(file)
@@ -282,11 +286,10 @@ func main() {
 
 	//************************************* Test Workload *************************************************
 
-	
-
 	start := time.Now()
-	fromFileWorkload()
+	fromFileWorkload(*workload)
 	duration := time.Since(start)
+	fmt.Println("Total time taken: ")
 	fmt.Println(duration)
 
 }

@@ -14,7 +14,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	// 'kvexample' is main module name (i.e was initialized as 'go mod init kvexample')
+	//'kvexample' is main module name (i.e was initialized as 'go mod init kvexample')
 	// Compiled protobuff are stored at '/kvstore/protocompiled/kvstore'
 	kvs "kvexample/kvstore/protocompiled/kvstore"
 )
@@ -142,7 +142,7 @@ func newServer() *storeServer {
 }
 
 
-//####################################################################################################################################
+//################################################ MAIN ##################################################################
 
 
 func main() {

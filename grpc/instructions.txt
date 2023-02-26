@@ -1,0 +1,8 @@
+1. Run bash setup.sh in gRPC/grpc. It will give further instructions
+
+Troubleshoot:
+If port is unavailable check: netstat -nlp|grep <enter port no>
+And kill the process using the port using: kill -9 <pid>
+
+Or  simply use: fuser -k <port_no>/tcp
+eg: fuser -k 8008/tcp 8007/tcp 8006/tcp
