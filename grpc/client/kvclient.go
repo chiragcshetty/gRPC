@@ -25,22 +25,22 @@ func printKV(key string, valuets *kvs.ValueTs) {
 
 // gets value for the given key
 func getKV(client kvs.StoreClient, key string) {
-	fmt.Printf("Getting value and ts for the key %s \n", key)
+	//fmt.Printf("Getting value and ts for the key %s \n", key)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	kv1 := kvs.Record{
 		Key: key ,
 	}
-	valuets, err := client.Get(ctx, &kv1)
+	_, err := client.Get(ctx, &kv1)
 	if err != nil {
 		log.Fatalf("client.Get failed: %v", err)
 	}
-	printKV(key, valuets)
+	//printKV(key, valuets)
 }
 
 func setKV(client kvs.StoreClient, key string, value string, ts int32) {
-	fmt.Printf("Setting: ( key: %s, value : %s, ts : %d ) \n", key, value, ts)
+	//fmt.Printf("Setting: ( key: %s, value : %s, ts : %d ) \n", key, value, ts)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -51,11 +51,11 @@ func setKV(client kvs.StoreClient, key string, value string, ts int32) {
 		Ts: ts,
 		},
 	}
-	ack, err := client.Set(ctx, &kv1)
+	_, err := client.Set(ctx, &kv1)
 	if err != nil {
 		log.Fatalf("client.Get failed: %v", err)
 	}
-	fmt.Println("Ack rcvd:", ack.String())
+	//fmt.Println("Ack rcvd:", ack.String())
 }
 
 // ************** Simran: template *************************
@@ -85,7 +85,7 @@ func main() {
 	var i int32 = 0
 
 	start := time.Now()
-	for i=200; i<10000; i++{
+	for i=200; i<20000; i++{
 		setKV(client, "KEY9991", fmt.Sprintf("%s-%d-%d", "Val", *clientid ,i), i)
 		setKV(client, "KEY99910", fmt.Sprintf("%s-%d-%d", "Val2", *clientid, i), i)
 		getKV(client, "KEY9991")
