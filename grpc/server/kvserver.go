@@ -29,7 +29,7 @@ type storeServer struct {
 	//      But protobuff doesn't support fixed length byte array
 	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])
 
-	lock         sync.Mutex 
+	lock         sync.RWMutex 
 }
 //*******************************************************************************************************************************
 
@@ -37,9 +37,9 @@ type storeServer struct {
 // Implementation of Get service
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
 	    //fmt.Println("Got a request for: ", record.String())
-		s.lock.Lock()
+		s.lock.RLock()
 		valuets, ok := s.store[record.GetKey()]
-		s.lock.Unlock()
+		s.lock.RUnlock()
 		if ok{
 			return &valuets, nil
 		}
