@@ -42,7 +42,8 @@ func getOneReplica(client kvs.StoreClient, key string, ch chan<- *kvs.ValueTs  )
 	}
 	valuets, err := client.Get(ctx, &kv1)
 	if err != nil {
-		log.Fatalf("client.Get failed: %v", err)
+		//log.Fatalf("client.Get failed: %v", err)
+		return
 	}
 	printKV(key, valuets)
 	ch <- valuets
@@ -62,7 +63,8 @@ func setOneReplica(client kvs.StoreClient, key string, value string, ts float32,
 	}
 	ack, err := client.Set(ctx, &kv1)
 	if err != nil {
-		log.Fatalf("client.Get failed: %v", err)
+		//log.Fatalf("client.Get failed: %v", err)
+		return
 	}
 	fmt.Println("Ack rcvd:", ack.String())
 	ch <- ack
@@ -89,7 +91,7 @@ func getKV(key string) (float32, string) {
 				numReplies = numReplies + 1
 				fmt.Printf("Num replies : %d\n", numReplies)
 			default:
-				time.Sleep(100 * time.Nanosecond)
+				time.Sleep(20 * time.Nanosecond)
 		}
 	}
 	fmt.Printf("getKV Done \n")
@@ -108,7 +110,7 @@ func setKV(key string, value string, ts float32) int {
 			case _ = <-ackChannel:
 				numAcks = numAcks + 1
 			default:
-				time.Sleep(100 * time.Nanosecond)
+				time.Sleep(20 * time.Nanosecond)
 		}
 	}
 	fmt.Printf("setKV Done \n")
@@ -183,9 +185,9 @@ func main() {
 	key := ""
 
 	start := time.Now()
-	for i=200; i<1000; i++{
+	for i=200; i<10000; i++{
 		fmt.Println(i, " ---------------------------------------------------------------------------------------------------")
-		key = fmt.Sprintf("KEY%d%d",400 ,i%10)
+		key = fmt.Sprintf("KEY%d%d",700 ,i%10)
 		value = read(key)
 		fmt.Printf("Recieved for key %s: %s \n\n", key, value)
 
