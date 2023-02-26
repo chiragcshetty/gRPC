@@ -1,3 +1,5 @@
-localhost:8009
 localhost:8008
-localhost:8007
+localhost:8009
+localhost:8010
+localhost:8011
+localhost:8012
