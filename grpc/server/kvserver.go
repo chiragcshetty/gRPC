@@ -59,7 +59,7 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	current_valuets, ok := s.store[affected_key]
 
 	if ok{
-		fmt.Printf("		Timestamps: Current: %d, Proposed: %d \n", current_valuets.GetTs(), proposed_valuets.GetTs())
+		fmt.Printf("		Timestamps: Current: %f, Proposed: %f \n", current_valuets.GetTs(), proposed_valuets.GetTs())
 		if proposed_valuets.GetTs() > current_valuets.GetTs(){
 			s.store[affected_key] = *proposed_valuets
 			fmt.Printf("		Value replaced!\n\n")
@@ -101,7 +101,7 @@ func (s *storeServer) loadKV() {
 
 
 func printKV(kv *kvs.Record) {
-	fmt.Printf("%s %s %d \n", kv.GetKey(), kv.Valuets.GetValue(), kv.Valuets.GetTs())
+	fmt.Printf("%s %s %f \n", kv.GetKey(), kv.Valuets.GetValue(), kv.Valuets.GetTs())
 }
 
 
@@ -126,8 +126,6 @@ func main() {
 	kvs.RegisterStoreServer(grpcServer, newServer())
 	grpcServer.Serve(lis)
 }
-
-
 
 
 
