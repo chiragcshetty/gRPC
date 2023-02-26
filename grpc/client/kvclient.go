@@ -6,15 +6,18 @@ import (
 	"log"
 	"time"
 	"fmt"
+	"os"
+	"bufio"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	kvs "kvexample/kvstore/protocompiled/kvstore"
 )
 
+// "localhost:8009"
 var (
 	clientid           = flag.Int("id", 0, "client id")
-	serverAddr         = flag.String("addr", "localhost:8009", "The server address in the format of host:port")
+	serverAddrInfo     = flag.String("addrfile", "replicainfo.txt" , "File containing server address in the format of host:port")
 	serverHostOverride = flag.String("server_host_override", "x.test.example.com", "The server name used to verify the hostname returned by the TLS handshake")
 )
 
@@ -25,22 +28,22 @@ func printKV(key string, valuets *kvs.ValueTs) {
 
 // gets value for the given key
 func getKV(client kvs.StoreClient, key string) {
-	//fmt.Printf("Getting value and ts for the key %s \n", key)
+	fmt.Printf("Getting value and ts for the key %s \n", key)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	kv1 := kvs.Record{
 		Key: key ,
 	}
-	_, err := client.Get(ctx, &kv1)
+	valuets, err := client.Get(ctx, &kv1)
 	if err != nil {
 		log.Fatalf("client.Get failed: %v", err)
 	}
-	//printKV(key, valuets)
+	printKV(key, valuets)
 }
 
 func setKV(client kvs.StoreClient, key string, value string, ts int32) {
-	//fmt.Printf("Setting: ( key: %s, value : %s, ts : %d ) \n", key, value, ts)
+	fmt.Printf("Setting: ( key: %s, value : %s, ts : %d ) \n", key, value, ts)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -51,11 +54,11 @@ func setKV(client kvs.StoreClient, key string, value string, ts int32) {
 		Ts: ts,
 		},
 	}
-	_, err := client.Set(ctx, &kv1)
+	ack, err := client.Set(ctx, &kv1)
 	if err != nil {
 		log.Fatalf("client.Get failed: %v", err)
 	}
-	//fmt.Println("Ack rcvd:", ack.String())
+	fmt.Println("Ack rcvd:", ack.String())
 }
 
 // ************** Simran: template *************************
@@ -70,17 +73,36 @@ func main() {
 	flag.Parse()
 	fmt.Printf("Client id %d \n", *clientid)
 	var opts []grpc.DialOption
-	
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-
-	conn, err := grpc.Dial(*serverAddr, opts...)
+	var replicaClients []kvs.StoreClient
+	//****************************************************************************
+	// source: https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
+	file, err := os.Open(*serverAddrInfo)
 	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-	client := kvs.NewStoreClient(conn)
+        log.Fatal(err)
+    }
+    defer file.Close()
 
+	scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        replicaddr := scanner.Text()
+		conn, err := grpc.Dial(replicaddr, opts...)
+		if err != nil {
+			log.Fatalf("fail to dial: %v", err)
+		}
+		defer conn.Close()
+		replicaClients = append(replicaClients, kvs.NewStoreClient(conn))
+    }
+
+	if err := scanner.Err(); err != nil {
+        log.Fatal(err)
+    }
+	//*******************************************************************************
+
+	
+
+	client := replicaClients[0]
 	// Looking for a valid feature
 	var i int32 = 0
 

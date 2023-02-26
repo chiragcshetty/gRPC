@@ -36,7 +36,7 @@ type storeServer struct {
 
 // Implementation of Get service
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
-	    //fmt.Println("Got a request for: ", record.String())
+	    fmt.Println("Got a request for: ", record.String())
 		s.lock.Lock()
 		valuets, ok := s.store[record.GetKey()]
 		s.lock.Unlock()
@@ -50,7 +50,7 @@ func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs
 
 // Implementation of Set service
 func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg, error) {
-	//fmt.Println("\nGot a set for: ", record.String())
+	fmt.Println("\nGot a set for: ", record.String())
 
 	affected_key  := record.GetKey()
 	proposed_valuets := record.Valuets
@@ -59,16 +59,16 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	current_valuets, ok := s.store[affected_key]
 
 	if ok{
-		//fmt.Printf("		Timestamps: Current: %d, Proposed: %d \n", current_valuets.GetTs(), proposed_valuets.GetTs())
+		fmt.Printf("		Timestamps: Current: %d, Proposed: %d \n", current_valuets.GetTs(), proposed_valuets.GetTs())
 		if proposed_valuets.GetTs() > current_valuets.GetTs(){
 			s.store[affected_key] = *proposed_valuets
-			//fmt.Printf("		Value replaced!\n\n")
+			fmt.Printf("		Value replaced!\n\n")
 		} else {
-			//fmt.Printf("		Value not changed. No action needed\n\n")
+			fmt.Printf("		Value not changed. No action needed\n\n")
 		}	
 	} else {
 		s.store[affected_key] = *proposed_valuets
-		//fmt.Printf("Key doesnt exist. Added\n\n")
+		fmt.Printf("Key doesnt exist. Added\n\n")
 	}
 	s.lock.Unlock()
 
@@ -116,6 +116,7 @@ func newServer() *storeServer {
 
 func main() {
 	flag.Parse()
+	fmt.Printf("Replica Server port no: %d \n", *port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
