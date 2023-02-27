@@ -1,4 +1,6 @@
+cd ..
 
+go mod tidy
 echo "Compiling kvstore protobuf"
 cd kvstore
 protoc --go_out=.   --go-grpc_out=.   *.proto
