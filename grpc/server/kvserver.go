@@ -30,13 +30,15 @@ type storeServer struct {
 	kvs.UnimplementedStoreServer
 	// key is 24 bytes, value is 10 bytes, but we are not enforcing it. 
 	// Instaed we use a string for key, vlaue (note: '[]byte' can't be used as map key in golang)
-	store map[string]kvs.ValueTs 
+	store1 map[string]kvs.ValueTs 
+	store2 map[string]kvs.ValueTs
 	// TODO:Enforce key length (eg: map[[24]byte]kvs.ValueTs)
 	//      But protobuff doesn't support fixed length byte array
 	//		So need casting every time like: s.store[([24]byte)(key.Key[0:23])
 
 	// All read, write require locking of entire KV store. BAD!
-	lock         sync.Mutex 
+	lock1         sync.Mutex 
+	lock2         sync.Mutex 
 }
 
 //####################################### gRPC Server Service implemmentation ###############################################################
@@ -46,9 +48,15 @@ type storeServer struct {
 // Request: GET (key). If key is found, send back the (value,ts). Else send ("", 0.0)
 func (s *storeServer) Get(ctx context.Context, record *kvs.Record) (*kvs.ValueTs, error) {
 	    //log.Printf("!^! Got a Get request for: %s \n", record.GetKey())
-		s.lock.Lock()
-			valuets, ok := s.store[record.GetKey()]
-		s.lock.Unlock()
+		storeServe := s.store2
+		lockNum := 2
+		if (record.GetKey() < "KEY-00000000000000499999"){
+			storeServe = s.store1
+			lockNum = 1
+		} 
+		if lockNum==1 {s.lock1.Lock()} else {s.lock2.Lock()}
+			valuets, ok := storeServe[record.GetKey()]
+		if lockNum==1 {s.lock1.Unlock()} else {s.lock2.Unlock()}
 		if ok{
 			//log.Printf("		Sending back: %s \n", valuets.String())
 			return &valuets, nil
@@ -67,23 +75,30 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	affected_key  := record.GetKey()
 	proposed_valuets := record.Valuets
 
-	s.lock.Lock()
-		current_valuets, ok := s.store[affected_key]
+	storeServe := s.store2
+	lockNum := 2
+	if (affected_key < "KEY-00000000000000499999"){
+		storeServe = s.store1
+		lockNum = 1
+	} 
+
+	if lockNum==1 {s.lock1.Lock()} else {s.lock2.Lock()}
+		current_valuets, ok := storeServe[affected_key]
 		// Set the new vallue only if current ts < proposed ts. 
 		// Else do nothing and just ack the request
 		if ok {
 				//log.Printf("		Timestamps: Current: %f, Proposed: %f \n", current_valuets.GetTs(), proposed_valuets.GetTs())
 				if proposed_valuets.GetTs() > current_valuets.GetTs(){
-					s.store[affected_key] = *proposed_valuets
+					storeServe[affected_key] = *proposed_valuets
 					//log.Printf("		Value replaced!\n\n")
 				} else {
 					//log.Printf("		Value not changed. No action needed\n\n")
 				}	
 		} else {  // If key is not found, add the key
-				s.store[affected_key] = *proposed_valuets
+				storeServe[affected_key] = *proposed_valuets
 				//log.Printf("Key didn't exist. So, Added it. Thank me later!\n\n")
 		}
-	s.lock.Unlock()
+	if lockNum==1 {s.lock1.Unlock()} else {s.lock2.Unlock()}
 
 	// Server Acks in any case.
 	return  &kvs.AckMsg{}, nil
@@ -101,7 +116,7 @@ func (s *storeServer) loadKV() {
 				Ts: 1.0,
 			},
 		}
-		s.store[kv1.GetKey()] = *kv1.Valuets
+		s.store1[kv1.GetKey()] = *kv1.Valuets
 		printKV(&kv1)
 	}	
 	log.Printf("Setup Complete.\n\n")
@@ -123,7 +138,11 @@ func (s *storeServer) loadKVfromFile() {
 				Ts: 1.0,
 			},
 		}
-		s.store[kvrecord.GetKey()] = *kvrecord.Valuets
+		if (key < "KEY-00000000000000499999"){
+			s.store1[kvrecord.GetKey()] = *kvrecord.Valuets
+		} else {
+			s.store2[kvrecord.GetKey()] = *kvrecord.Valuets
+		}
 		printKV(&kvrecord)
 	}
 	log.Printf("Setup Complete.\n\n")
@@ -136,7 +155,7 @@ func printKV(kv *kvs.Record) {
 
 
 func newServer() *storeServer {
-	s := &storeServer{ store: make(map[string]kvs.ValueTs) }
+	s := &storeServer{ store1: make(map[string]kvs.ValueTs), store2: make(map[string]kvs.ValueTs) }
 	s.loadKVfromFile()
 	return s
 }

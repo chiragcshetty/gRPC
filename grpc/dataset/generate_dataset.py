@@ -2,7 +2,7 @@ import string
 import random
 
 ########################################
-numOperation = 200000
+numOperation = 20000
 numClients   = 3
 fractionRead = 0.5
 fractionWrite = 1 -  fractionRead
