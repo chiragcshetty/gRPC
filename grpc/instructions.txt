@@ -1,4 +1,4 @@
-scp -r gRPC/ cshetty2@hp139.utah.cloudlab.us:~/
+(On cloudlab, this works on x86 machine. Sometimes you may get aarch64 machines on which you'll see the go binary files)
 
 # On Remote:
 cd gRPC/grpc/scripts/

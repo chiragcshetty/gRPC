@@ -1,0 +1,29 @@
+(On cloudlab, this works on x86 machine. Sometimes you may get aarch64 machines on which you'll see the go binary files)
+
+# On Remote:
+cd gRPC/grpc/scripts/
+bash go_setup.sh
+source ~/.bashrc
+bash gRPC_setup.sh
+bash setup.sh
+
+cd ..
+# update serverinfo.txt
+
+# For server run:
+./kvserver -port 8008 -log off
+
+# For client run:
+./kvclient -id 2 -log stdout -workload=./dataset/operations-2.dat
+
+
+
+
+1. Run bash setup.sh in gRPC/grpc. It will give further instructions
+
+Troubleshoot:
+If port is unavailable check: netstat -nlp|grep <enter port no>
+And kill the process using the port using: kill -9 <pid>
+
+Or  simply use: fuser -k <port_no>/tcp
+eg: fuser -k 8008/tcp 8007/tcp 8006/tcp

@@ -1,0 +1,39 @@
+syntax = "proto3";
+package kvstoreProtoFile;
+
+option go_package = "protocompiled/kvstore_file";
+
+
+// Interface exported by the server.
+service Store {
+
+  // Client asks (key, "", "") for given key. Server returns (value, ts)
+  rpc GetTest(Record) returns (Response) {}
+  rpc Get(Record) returns (stream Response) {}
+
+  // Client asks to Set (key, value, timestamp). Servers replies with an Ack
+  rpc Set(Record) returns (AckMsg) {}
+
+}
+
+message Response {
+    string fileChunk = 1;
+}
+
+message Record {
+	// Using a string instead (note: '[]byte' can't be used as map key in golang)
+    string key = 1;
+    string filename = 2;
+}
+
+
+message AckMsg {
+    // ack by server to a Set sent by client
+    bool ack = 1;
+}
+
+
+
+//############### INFO #####################
+// 'bytes': Any arbitrary sequence of bytes no longer than 2^32
+// source: https://protobuf.dev/programming-guides/proto3/#scalar
