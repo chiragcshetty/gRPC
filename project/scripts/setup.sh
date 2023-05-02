@@ -1,4 +1,7 @@
 cd ..
+mkdir -p dataset_files
+mkdir -p dataset_files/files
+mkdir -p dataset_files/rcvd/files
 
 go mod tidy
 echo "Compiling kvstore protobuf"
