@@ -13,6 +13,7 @@ import (
 	//"strings"
 	"io"
 	"os/exec"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -111,11 +112,13 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	//log.Printf("!~! Got a Set request for: %s\n", record.String())
 
 	affected_key  := record.GetKey()
-	proposed_filename := record.GetFilename()
+	currentTime := time.Now().UnixMilli()
+	proposed_filename := fmt.Sprintf("dataset_files/files/file-%s-%d.dat",affected_key,currentTime)
 
 	s.lock.Lock()
 		current_filename, ok := s.store[affected_key]
 		s.store[affected_key] = proposed_filename
+		log.Printf(proposed_filename)
 
 		_, err := exec.Command("bash", "generate_file.sh", proposed_filename, filesize ).Output()
 		if err != nil {
@@ -127,6 +130,7 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 			s.curBinsize = (s.curBinsize + 1)%binsize
 			cur_binfile := s.garbage[s.curBinsize]
 			s.garbage[s.curBinsize] = current_filename
+			
 			if  cur_binfile!= "" { // bin is full
 				log.Printf("Garbage bin is full, deleting the file %s", cur_binfile)
 				e := os.Remove(cur_binfile)
@@ -153,19 +157,20 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 // loadSome data into the KVstore to begin with
 func (s *storeServer) loadKV() {
 	
-	for i := 1000; i < 1005; i++ {
-		fn := fmt.Sprintf("dataset_files/files/file-%d.dat",i)
+	for i := 1000; i < 1010; i++ {
+		currentTime := time.Now().UnixMilli()
+		fn := fmt.Sprintf("dataset_files/files/file-KEY%d-%d.dat",i,currentTime)
 		_, err := exec.Command("bash", "generate_file.sh", fn, filesize ).Output()
 		if err != nil {
 			fmt.Printf("error %s \n", err)
 		}
+		keynew := fmt.Sprintf("%s%d", "KEY", i)
 		kv1 := kvs.Record{
-			Key: fmt.Sprintf("%s%d", "KEY", i) ,
-			Filename: fn,
+			Key: keynew ,
 		}
 		log.Println(kv1.GetKey())
-		log.Println(kv1.GetFilename())
-		s.store[kv1.GetKey()] = kv1.GetFilename()
+		log.Println(fn)
+		s.store[kv1.GetKey()] = fn
 	}	
 	log.Printf("Setup Complete.\n\n")
 }

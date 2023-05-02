@@ -16,6 +16,9 @@ go build server/kvserver_file.go
 #python3 generate_dataset.py
 #cd ..
 
+rm -rf dataset_files/rcvd_files/*
+rm -rf dataset_files/files/*
+
 echo "Success. Done!"
 echo " "
 echo "Next steps:"

@@ -23,7 +23,9 @@ message Response {
 message Record {
 	// Using a string instead (note: '[]byte' can't be used as map key in golang)
     string key = 1;
-    string filename = 2;
+    //string filename = 2;
+    string clientId = 2;
+    int32 timeStamp = 3;
 }
 
 

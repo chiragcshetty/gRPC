@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	//"strings"
 	"io"
+	"math/rand"
+	"os/exec"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,10 +26,8 @@ import (
 
 //############################################## Globals ###################################################################################
 var (
-	replicaClients []kvs.StoreClient   // One client per server replica
+	storeServer kvs.StoreClient   // One client per server replica
 	clientid           = flag.Int("id", 0, "client id")
-	numReplicas        = 0             // Number of server replicas. Obtained from serverAddrInfo.
-	quorum             = 0             // floor((no of replicas)/2) + 1
 	clientSignature float32            // eg: if clientid = 143, clientSignature is 0.143. 
 									   // To have non-overlapping timestamps among clients
 	// serverAddrInfo: file that contains replica info as "ip:port" - one per line
@@ -43,6 +43,45 @@ func check(e error) {
     if e != nil {
         panic(e)
     }
+}
+
+func getFile(key string) (string, int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	testResponse, err := storeServer.GetTest(ctx, &kvs.Record{})
+	log.Println(testResponse.GetFileChunk())
+
+	fileStreamResponse, err := storeServer.Get(ctx, &kvs.Record{
+		Key: key,
+	})
+	if err != nil {
+		log.Println("error downloading:", err)
+		return "", 2
+	}
+	fn := fmt.Sprintf("dataset_files/rcvd_files/file-%s.dat",key)
+	f, err := os.Create(fn)
+    check(err)
+	defer f.Close()
+	w := bufio.NewWriter(f)
+
+	for {
+		chunkResponse, err := fileStreamResponse.Recv()
+		if err == io.EOF {
+			log.Println("received all chunks")
+			break
+		}
+		if err != nil {
+			log.Println("err receiving chunk:", err)
+			break
+		}
+		chunkLen, err := w.WriteString(chunkResponse.GetFileChunk())
+    	check(err)
+		log.Printf("wrote %d bytes\n", chunkLen)
+	}
+	w.Flush()
+
+	return fn, 0
 }
 
 //###################################################### MAIN ###############################################################
@@ -76,50 +115,45 @@ func main() {
 	if err != nil {
 		log.Fatal("client could connect to grpc service:", err)
 	}
-	c := kvs.NewStoreClient(conn)
+	storeServer = kvs.NewStoreClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	testResponse, err := c.GetTest(ctx, &kvs.Record{})
-	log.Println(testResponse.GetFileChunk())
-
 	for i := 0; i < 12; i++ {
-		_,_= c.Set(ctx, &kvs.Record{
+		_,_= storeServer.Set(ctx, &kvs.Record{
 			Key: "KEY1006",
-			Filename: fmt.Sprintf("dataset_files/files/file-%d.dat",i),
 		})
 	}
 
+	cache := make(map[string]string)
+	for i := 0; i < 50; i++  {
+		j := rand.Intn(10)
 
-	fileStreamResponse, err := c.Get(ctx, &kvs.Record{
-		Key: "KEY1001",
-	})
-	if err != nil {
-		log.Println("error downloading:", err)
-		return
-	}
-	fn := fmt.Sprintf("dataset_files/rcvd_files/file-%d.dat",1001)
-	f, err := os.Create(fn)
-    check(err)
-	defer f.Close()
-	w := bufio.NewWriter(f)
-
-	for {
-		chunkResponse, err := fileStreamResponse.Recv()
-		if err == io.EOF {
-			log.Println("received all chunks")
-			break
+		start := time.Now()
+		key := fmt.Sprintf("%s%d", "KEY", 1000+j)
+		fn, ok := cache[key]
+		// If the key exists
+		if ok {
+			log.Println("Found in Cache")
+		} else {
+			log.Println("NOT Found in Cache")
+			fn,_= getFile(key)
+			if fn!=""{cache[key] = fn}
+			
 		}
+		log.Println(fn)
+
+
+ 		_, err := exec.Command("cat", fn).Output()
+		//log.Printf("The date is %s\n", outp)
 		if err != nil {
-			log.Println("err receiving chunk:", err)
-			break
+			fmt.Printf("error %s \n", err)
 		}
-		chunkLen, err := w.WriteString(chunkResponse.GetFileChunk())
-    	check(err)
-		log.Printf("wrote %d bytes\n", chunkLen)
+ 
+
+		duration := time.Since(start)
+		log.Println(duration)
 	}
-	w.Flush()
 
 }
 
