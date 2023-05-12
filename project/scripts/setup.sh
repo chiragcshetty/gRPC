@@ -1,7 +1,7 @@
 cd ..
 mkdir -p dataset_files
 mkdir -p dataset_files/files
-mkdir -p dataset_files/rcvd/files
+mkdir -p dataset_files/rcvd_files
 
 go mod tidy
 echo "Compiling kvstore protobuf"
@@ -27,7 +27,7 @@ echo " "
 echo "Next steps:"
 
 echo "1. Update server replica information in replicainfo.txt. Format replica_ip:port. One replica per line"
-echo "2. Run server replica: Example: ' ./kvserver -port 8008 -log stdout '. '-log' can be off, stdout or file. If file is choosen, the log will be at logs/server-<port>.txt. The KV store is automatically initialized with data in dataset/dataset.dat"
+echo "2. Run server replica: Example: ' ./kvserver_file -port 8008 -log stdout '. '-log' can be off, stdout or file. If file is choosen, the log will be at logs/server-<port>.txt. The KV store is automatically initialized with data in dataset/dataset.dat"
 echo "3. Run client: Example: ' ./kvclient -id 2 -log stdout -workload=./dataset/operations-2.dat'. Client's id must be an integer. Client runs the workload in dataset/operations.dat and prints out the time taken"
 
 echo "To kill processes using needed ports: fuser -k 8008/tcp 8007/tcp 8006/tcp"
