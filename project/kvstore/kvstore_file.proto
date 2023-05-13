@@ -17,7 +17,9 @@ service Store {
 }
 
 message Response {
-    string fileChunk = 1;
+    int32 timestamp = 1;
+    string fileChunk = 2;
+    
 }
 
 message Record {

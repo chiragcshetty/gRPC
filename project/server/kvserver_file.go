@@ -173,8 +173,9 @@ func (s *storeServer) runCompaction () {
 			s.recent_set = make(map[int32]int)
 			lastCompactHfile = hfileNo
 			s.rsLock.Unlock()
+			log.Printf( fmt.Sprint("Compaction at ", hfileNo))
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
 
@@ -197,7 +198,7 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 	//    is too large then just search for the key and send the value
 
 	//bufferSize := 64 *1024 //64KiB, tweak this as desired
-	bufferSize := 200 //64KiB, tweak this as desired
+	bufferSize := 5192 //64KiB, tweak this as desired
 
 	// 1.--------------------------------------------------------------------
 	s.lock.Lock()
@@ -206,6 +207,7 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 	if ok == nil {   // key found in memstore
 		resp := &kvs.Response{
 				FileChunk: value,
+				Timestamp: -1 ,
 			}
 		err := responseStream.Send(resp)
 		check(err)
@@ -226,7 +228,8 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 				if keyHfileNo == int(record.GetTimeStamp()) {  
 					 // And timestamp matches, So valid file
 					resp := &kvs.Response{   // Cache valid
-						FileChunk: "valid",
+						FileChunk: "",
+						Timestamp: -3,
 					}
 					err := responseStream.Send(resp)
 					check(err)
@@ -250,6 +253,7 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 						}
 						resp := &kvs.Response{
 							FileChunk: string(buff[:bytesRead]),
+							Timestamp: int32(keyHfileNo),
 						}
 						err = responseStream.Send(resp)
 						//log.Println(resp.GetFileChunk())
@@ -268,12 +272,14 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 						val, err := searchKey(record.GetKey(), filename)
 						if err != nil{
 							resp := &kvs.Response{
-								FileChunk: "notfound",     // Key not found
+								FileChunk: "",     // Key not found
+								Timestamp: -2,
 							}
 							err = responseStream.Send(resp)
 						} else {
 							resp := &kvs.Response{
-								FileChunk: val,     
+								FileChunk: val,
+								Timestamp: int32(lastCompactHfile),     
 							}
 							err = responseStream.Send(resp)
 							check(err)
@@ -281,7 +287,8 @@ func (s *storeServer) Get(record *kvs.Record, responseStream kvs.Store_GetServer
 
 					} else {
 						resp := &kvs.Response{
-							FileChunk: "notfound",     // Key not found
+							FileChunk: "",     // Key not found
+							Timestamp: -2,
 						}
 						err := responseStream.Send(resp)
 						check(err)
@@ -302,7 +309,7 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 	newvalue := record.GetValue()
 	
 
-	//log.Printf(fmt.Sprint(newkey))
+	log.Printf(fmt.Sprint(newkey))
 
 	kv := &KVItem {value: newvalue,
 		priority: newkey,
@@ -310,14 +317,15 @@ func (s *storeServer) Set(ctx context.Context, record *kvs.Record) (*kvs.AckMsg,
 
 	s.lock.Lock()
 	heap.Push(&(s.memstore), kv)
-	//log.Printf("+++++++")
+	log.Printf(fmt.Sprint(s.memstore.Len()))
 	
 
 	if s.memstore.Len() >= hfilesizelimit {
-		//log.Printf("-----------------------------")
+		
 		s.rsLock.Lock()
 		hfileNo = hfileNo + 1
 		hfile     = fmt.Sprintf("%s%d.dat",hfilePath,hfileNo)
+		log.Printf(hfile)
 		kvitemj := int32(-1)      // To avoid duplicates: Fix the memstore to not have duplicates
 		for {
 			if s.memstore.Len() > 0 {

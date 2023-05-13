@@ -3,7 +3,7 @@
 cd $1
 sort -m -V -o merged.log *.dat
 rm *.dat
-uniq -w 3 merged.log > "$2.dat"
+uniq -w 4 merged.log > "$2.dat"
 rm merged.log 
 
 cd -

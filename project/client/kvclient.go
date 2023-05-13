@@ -117,16 +117,20 @@ func main() {
 	}
 	storeServer = kvs.NewStoreClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
 	defer cancel()
-	for i := 0; i < 200; i++ {
+	//for i := 0; i < 2000; i++ {
+	for {
 		randkey := rand.Intn(300)
-		//log.Printf(fmt.Sprint(randkey))
+		log.Printf(fmt.Sprint(randkey))
 		//randkey = int(i/2)
-		_,_= storeServer.Set(ctx, &kvs.Record{
+		ack,err:= storeServer.Set(ctx, &kvs.Record{
 			Key: int32(randkey),
-			Value: fmt.Sprintf("%s%d", "VALUEXXXXX-", i),
+			Value: fmt.Sprintf("%s%d", "VALUEXXXXX-", 000),
 		})
+		check(err)
+		log.Printf(fmt.Sprint(ack.GetAck()))
+		time.Sleep(20 * time.Millisecond)
 	}
 
 /* 	cache := make(map[string]string)   // Key to hfile
