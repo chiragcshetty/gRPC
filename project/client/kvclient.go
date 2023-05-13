@@ -7,14 +7,14 @@ import (
 	"time"
 	"fmt"
 	"os"
-	"bufio"
+	//"bufio"
 	//"strconv"
 	//"math"
 	"io/ioutil"
 	//"strings"
-	"io"
+	//"io"
 	"math/rand"
-	"os/exec"
+	//"os/exec"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,7 +45,7 @@ func check(e error) {
     }
 }
 
-func getFile(key string) (string, int) {
+/* func getFile(key string) (string, int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -82,7 +82,7 @@ func getFile(key string) (string, int) {
 	w.Flush()
 
 	return fn, 0
-}
+} */
 
 //###################################################### MAIN ###############################################################
 func main() {
@@ -119,13 +119,17 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 200; i++ {
+		randkey := rand.Intn(300)
+		//log.Printf(fmt.Sprint(randkey))
+		//randkey = int(i/2)
 		_,_= storeServer.Set(ctx, &kvs.Record{
-			Key: "KEY1006",
+			Key: int32(randkey),
+			Value: fmt.Sprintf("%s%d", "VALUEXXXXX-", i),
 		})
 	}
 
-	cache := make(map[string]string)
+/* 	cache := make(map[string]string)   // Key to hfile
 	for i := 0; i < 50; i++  {
 		j := rand.Intn(10)
 
@@ -153,7 +157,7 @@ func main() {
 
 		duration := time.Since(start)
 		log.Println(duration)
-	}
+	} */
 
 }
 

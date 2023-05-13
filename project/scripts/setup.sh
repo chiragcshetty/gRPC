@@ -1,7 +1,12 @@
 cd ..
+rm -rf dataset_files/hfiles
+rm -rf dataset_files/rcvd_hfiles
+
 mkdir -p dataset_files
 mkdir -p dataset_files/files
 mkdir -p dataset_files/rcvd_files
+mkdir -p dataset_files/hfiles
+mkdir -p dataset_files/rcvd_hfiles
 
 go mod tidy
 echo "Compiling kvstore protobuf"
@@ -10,9 +15,11 @@ protoc --go_out=.   --go-grpc_out=.   *.proto
 
 cd ..
 echo "Building Client: client/kvclient.go "
-go build client/kvclient.go
-echo "Building Server: server/kvserver.go"
-go build server/kvserver_file.go
+go build ./client/kvclient.go
+echo "Building Client: client_read/kvclient_read.go "
+go build ./client_read/kvclient_read.go
+echo "Building Server: server/kvserver_file.go"
+go build ./server/kvserver_file.go
 
 #echo "Generating dataset to initialize the kv store, See dataset/dataset.dat. And workload operations, See dataset/operations.dat"
 #cd dataset
